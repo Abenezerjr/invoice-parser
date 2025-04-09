@@ -1,23 +1,47 @@
-#
-# from pydantic import BaseModel
-# from typing import List, Dict, Optional
-#
-#
-# # class InvoiceData(BaseModel):
-#     invoice_number: str
-#     date: str
-#     total_amount: float
-#     items: List[Dict[str, str]]
-#
-#
-# class SourceDocumentResponse(BaseModel):
-#     id: int
-#     title: str
-#     doc_hash: str
-#     size: int
-#     total_pages: Optional[int] = None
-#     status: Optional[str] = None
-#     embedded: Optional[bool] = None
-#
-#     class Config:
-#         orm_mode = True  # Enable ORM mode for SQLAlchemy compatibility
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class Address(BaseModel):
+    street: Optional[str]
+    city: Optional[str]
+    state: Optional[str]
+    postal_code: Optional[str]
+    country: Optional[str]
+
+
+class PaymentMethod(BaseModel):
+    type: str
+    details: Optional[dict]
+    instructions: Optional[str]
+
+
+class InvoiceItem(BaseModel):
+    description: str
+    quantity: float
+    unit_price: float
+    amount: float
+    period: Optional[str]
+
+
+class TaxDetail(BaseModel):
+    name: str
+    rate: str
+    amount: float
+
+
+class TaxSummary(BaseModel):
+    subtotal: float
+    total_excluding_tax: float
+    taxes: List[TaxDetail]
+    total: float
+
+
+class InvoiceResponse(BaseModel):
+    invoice: dict
+    issuer: dict
+    recipient: dict
+    items: List[InvoiceItem]
+    tax_summary: TaxSummary
+    notes: List[str]
+    pages: int

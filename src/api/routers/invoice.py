@@ -1,27 +1,26 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from src.parsers.pdf_parser import parse_invoice_pdf
-from src.models.models_db import InvoiceData
 import os
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from src.parsers.extract_text import extract_text_from_pdf, extract_text_from_docx
 
-app = FastAPI()
+router = APIRouter(prefix="/invoice", tags=["invoice"])
 
 
-@app.post("/parse-invoice/", response_model=InvoiceData)
-async def parse_invoice(file: UploadFile = File(...)):
-
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
-
-    
+@router.post("/invoice/upload")
+async def upload_invoice(file: UploadFile = File(...)):
     file_path = f"temp_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        buffer.write(file.file.read())
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
 
-    # Parse the invoice
-    parsed_data = parse_invoice_pdf(file_path)
-
-    # Clean up the temporary file
-    os.remove(file_path)
-
-    # Return the parsed data in JSON format
-    return parsed_data
+    try:
+        if file.content_type == "application/pdf":
+            text = extract_text_from_pdf(file_path)
+        elif file.content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            text = extract_text_from_docx(file_path)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        os.remove(file_path)
+        print(text)
+        return {"text": text}
+    except Exception as e:
+        os.remove(file_path)
+        raise HTTPException(status_code=500, detail=str(e))
